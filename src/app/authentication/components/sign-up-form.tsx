@@ -67,10 +67,14 @@ const SignUpForm = () => {
         onError: (error) => {
           if (error.error.code === "auth/email-already-in-use") {
             toast.error("Email already in use.");
-            return;
+            return form.setError("email", {
+              message: "Email already in use.",
+            });
           } else if (error.error.code === "auth/invalid-email") {
             toast.error("Invalid email.");
-            return;
+            return form.setError("email", {
+              message: "Invalid email.",
+            });
           }
           toast.error(error.error.message || "Failed to create account.");
           form.setError("email", {

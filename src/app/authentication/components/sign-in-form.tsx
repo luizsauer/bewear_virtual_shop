@@ -22,6 +22,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   email: z.email("E-mail inválido!"),
@@ -31,6 +34,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const SignInForm = () => {
+  const router = useRouter();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -39,8 +43,34 @@ const SignInForm = () => {
     },
   });
 
-  function onSubmit(values: FormValues) {
-    console.log(values);
+  async function onSubmit(values: FormValues) {
+    await authClient.signIn.email({
+      email: values.email,
+      password: values.password,
+      fetchOptions: {
+        onSuccess: () => {
+          toast.success("Logged in successfully!");
+          router.push("/");
+        },
+        onError: (error) => {
+          if (error.error.code === "auth/user-not-found") {
+            toast.error("User not found.");
+            return form.setError("email", {
+              message: "User not found.",
+            });
+          } else if (error.error.code === "auth/invalid-email") {
+            toast.error("Invalid email.");
+            return form.setError("email", {
+              message: "Invalid email.",
+            });
+          }
+          toast.error(error.error.message || "Failed to log in.");
+          form.setError("email", {
+            message: error.error.message || "Failed to log in.",
+          });
+        },
+      },
+    });
   }
   return (
     <>
