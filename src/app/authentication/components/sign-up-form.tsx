@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const formSchema = z
   .object({
@@ -40,6 +43,7 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 const SignUpForm = () => {
+  const router = useRouter();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,8 +54,31 @@ const SignUpForm = () => {
     },
   });
 
-  function onSubmit(values: FormValues) {
-    console.log(values);
+  async function onSubmit(values: FormValues) {
+    await authClient.signUp.email({
+      name: values.name,
+      email: values.email,
+      password: values.password,
+      fetchOptions: {
+        onSuccess: () => {
+          toast.success("Account created successfully!");
+          router.push("/");
+        },
+        onError: (error) => {
+          if (error.error.code === "auth/email-already-in-use") {
+            toast.error("Email already in use.");
+            return;
+          } else if (error.error.code === "auth/invalid-email") {
+            toast.error("Invalid email.");
+            return;
+          }
+          toast.error(error.error.message || "Failed to create account.");
+          form.setError("email", {
+            message: error.error.message || "Failed to create account.",
+          });
+        },
+      },
+    });
   }
   return (
     <>
