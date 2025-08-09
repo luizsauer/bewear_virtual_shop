@@ -1,3 +1,5 @@
+// src\app\category\[slug]\page.tsx
+
 import { Header } from "@/components/common/header";
 import ProductItem from "@/components/common/product-item";
 import { db } from "@/db";

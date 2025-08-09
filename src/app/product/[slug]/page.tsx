@@ -1,84 +1,96 @@
 import { eq } from "drizzle-orm";
-import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import Footer from "@/components/common/footer";
 import { Header } from "@/components/common/header";
 import ProductList from "@/components/common/product-list";
 import { db } from "@/db";
-import { productTable, productVariantTable } from "@/db/schema";
+import { productTable } from "@/db/schema";
 import { formatCentsToBRL } from "@/helpers/money";
 
-// import ProductActions from "./components/product-actions";
 import { Button } from "@/components/ui/button";
 import QuantitySelector from "./components/quantity-selector";
 import VariantSelector from "./components/variant-selector";
 
-interface ProductVariantPageProps {
-  params: Promise<{ slug: string }>;
+import Image from "next/image";
+
+interface ProductPageProps {
+  params: { slug: string };
+  searchParams: { variant?: string; quantity?: string };
 }
 
-const ProductVariantPage = async ({ params }: ProductVariantPageProps) => {
-  const { slug } = await params;
-  const productVariant = await db.query.productVariantTable.findFirst({
-    where: eq(productVariantTable.slug, slug),
-    with: {
-      product: {
-        with: {
-          variants: true,
-        },
-      },
-    },
-  });
-  if (!productVariant) {
-    return notFound();
-  }
-  const likelyProducts = await db.query.productTable.findMany({
-    where: eq(productTable.categoryId, productVariant.product.categoryId),
+const ProductPage = async ({ params, searchParams }: ProductPageProps) => {
+  // Busca o produto pelo slug
+  const product = await db.query.productTable.findFirst({
+    where: eq(productTable.slug, params.slug),
     with: {
       variants: true,
     },
   });
+
+  if (!product) {
+    return notFound();
+  }
+
+  // Se não houver variante na URL, use a primeira variante e redirecione
+  if (!searchParams.variant) {
+    const firstVariant = product.variants[0];
+    return redirect(`/product/${params.slug}?variant=${firstVariant.slug}`);
+  }
+
+  // Encontre a variante selecionada
+  let selectedVariant = product.variants.find(
+    (v) => v.slug === searchParams.variant,
+  );
+
+  // Se a variante não existir, use a primeira e redirecione
+  if (!selectedVariant) {
+    const firstVariant = product.variants[0];
+    return redirect(`/product/${params.slug}?variant=${firstVariant.slug}`);
+  }
+
+  const likelyProducts = await db.query.productTable.findMany({
+    where: eq(productTable.categoryId, product.categoryId),
+    with: {
+      variants: true,
+    },
+  });
+
   return (
     <>
       <Header />
-      {/* Imagem */}
       <div className="flex flex-col space-y-6">
         <Image
-          src={productVariant.imageUrl}
-          alt={productVariant.name}
+          src={selectedVariant.imageUrl}
+          alt={selectedVariant.name}
           sizes="100vw"
           height={0}
           width={0}
           className="h-auto w-full object-cover"
         />
 
-        {/* Variantes */}
         <div className="px-5">
           <VariantSelector
-            selectedVariantSlug={productVariant.slug}
-            variants={productVariant.product.variants}
+            selectedVariantSlug={selectedVariant.slug}
+            variants={product.variants}
+            productSlug={product.slug}
           />
         </div>
 
         <div className="px-5">
-          {/* DESCRIÇÃO */}
-          <h2 className="text-lg font-semibold">
-            {productVariant.product.name}
-          </h2>
+          <h2 className="text-lg font-semibold">{product.name}</h2>
           <h3 className="text-muted-foreground text-sm">
-            {productVariant.name}
+            {selectedVariant.name}
           </h3>
           <h3 className="text-lg font-semibold">
-            {formatCentsToBRL(productVariant.priceInCents)}
+            {formatCentsToBRL(selectedVariant.priceInCents)}
           </h3>
         </div>
 
-        {/* <ProductActions productVariantId={productVariant.id} /> */}
         <div className="px-5">
           <QuantitySelector />
         </div>
-        {/* Botoes */}
+
         <div className="flex flex-col gap-4 px-5">
           <Button className="rounded-full" size="lg" variant="outline">
             Adicionar à sacola
@@ -88,11 +100,8 @@ const ProductVariantPage = async ({ params }: ProductVariantPageProps) => {
           </Button>
         </div>
 
-        {/* Informaçoes */}
         <div className="px-5">
-          <p className="text-shadow-amber-600">
-            {productVariant.product.description}
-          </p>
+          <p className="text-shadow-amber-600">{product.description}</p>
         </div>
 
         <ProductList title="Talvez você goste" products={likelyProducts} />
@@ -103,4 +112,4 @@ const ProductVariantPage = async ({ params }: ProductVariantPageProps) => {
   );
 };
 
-export default ProductVariantPage;
+export default ProductPage;
