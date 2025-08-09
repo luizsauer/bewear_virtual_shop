@@ -1,5 +1,5 @@
 import { categoryTable } from "@/db/schema";
-
+import Link from "next/link";
 import { Button } from "../ui/button";
 
 interface CategorySelectorProps {
@@ -14,9 +14,14 @@ const CategorySelector = ({ categories }: CategorySelectorProps) => {
           <Button
             key={category.id}
             variant="ghost"
-            className="rounded-full bg-white text-xs font-semibold"
+            className="disabled:text-muted-foreground h-auto min-h-10 rounded-full bg-white px-4 py-2 text-xs font-semibold hover:bg-white/80 active:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/50"
+            asChild
           >
-            {category.name}
+            <Link href={`/category/${category.slug}`}>
+              <span className="text-center break-words whitespace-normal">
+                {category.name}
+              </span>
+            </Link>
           </Button>
         ))}
       </div>
