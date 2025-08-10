@@ -1,7 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import z from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -23,8 +25,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 const formSchema = z.object({
   email: z.email("E-mail inválido!"),
@@ -49,25 +49,25 @@ const SignInForm = () => {
       password: values.password,
       fetchOptions: {
         onSuccess: () => {
-          toast.success("Logged in successfully!");
           router.push("/");
         },
-        onError: (error) => {
-          if (error.error.code === "auth/user-not-found") {
-            toast.error("User not found.");
+        onError: (ctx) => {
+          if (ctx.error.code === "USER_NOT_FOUND") {
+            toast.error("E-mail não encontrado.");
             return form.setError("email", {
-              message: "User not found.",
-            });
-          } else if (error.error.code === "auth/invalid-email") {
-            toast.error("Invalid email.");
-            return form.setError("email", {
-              message: "Invalid email.",
+              message: "E-mail não encontrado.",
             });
           }
-          toast.error(error.error.message || "Failed to log in.");
-          form.setError("email", {
-            message: error.error.message || "Failed to log in.",
-          });
+          if (ctx.error.code === "INVALID_EMAIL_OR_PASSWORD") {
+            toast.error("E-mail ou senha inválidos.");
+            form.setError("password", {
+              message: "E-mail ou senha inválidos.",
+            });
+            return form.setError("email", {
+              message: "E-mail ou senha inválidos.",
+            });
+          }
+          toast.error(ctx.error.message);
         },
       },
     });
@@ -78,14 +78,14 @@ const SignInForm = () => {
       provider: "google",
     });
   };
-
   return (
     <>
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription> Sign in to continue. </CardDescription>
+          <CardTitle>Entrar</CardTitle>
+          <CardDescription>Faça login para continuar.</CardDescription>
         </CardHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <CardContent className="grid gap-6">
@@ -96,24 +96,23 @@ const SignInForm = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Email" />
+                      <Input placeholder="Digite seu email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Senha</FormLabel>
                     <FormControl>
                       <Input
-                        {...field}
+                        placeholder="Digite sua senha"
                         type="password"
-                        placeholder="Password"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -121,9 +120,9 @@ const SignInForm = () => {
                 )}
               />
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex flex-col gap-2">
               <Button type="submit" className="w-full">
-                Sign In
+                Entrar
               </Button>
               <Button
                 variant="outline"
@@ -158,4 +157,5 @@ const SignInForm = () => {
     </>
   );
 };
+
 export default SignInForm;

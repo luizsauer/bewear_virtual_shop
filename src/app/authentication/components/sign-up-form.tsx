@@ -1,7 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import z from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -22,24 +24,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 const formSchema = z
   .object({
-    name: z.string("Nome inválido.").trim().min(3, "Nome é obrigatório."),
-    email: z.email("E-mail inválido.").trim().min(3, "E-mail é obrigatório."),
-    password: z.string("Senha inválida.").min(8, "Senha curta."),
-    confirmPassword: z
-      .string("Confirmação de senha inválida.")
-      .min(8, "Confirmação de senha curta."),
+    name: z.string("Nome inválido.").trim().min(1, "Nome é obrigatório."),
+    email: z.email("E-mail inválido."),
+    password: z.string("Senha inválida.").min(8, "Senha inválida."),
+    passwordConfirmation: z.string("Senha inválida.").min(8, "Senha inválida."),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "As senhas não coincidem",
-    path: ["confirmPassword"], // indica em qual campo mostrar o erro
-  });
+  .refine(
+    (data) => {
+      return data.password === data.passwordConfirmation;
+    },
+    {
+      error: "As senhas não coincidem.",
+      path: ["passwordConfirmation"],
+    },
+  );
+
 type FormValues = z.infer<typeof formSchema>;
 
 const SignUpForm = () => {
@@ -50,7 +53,7 @@ const SignUpForm = () => {
       name: "",
       email: "",
       password: "",
-      confirmPassword: "",
+      passwordConfirmation: "",
     },
   });
 
@@ -61,47 +64,40 @@ const SignUpForm = () => {
       password: values.password,
       fetchOptions: {
         onSuccess: () => {
-          toast.success("Account created successfully!");
           router.push("/");
         },
         onError: (error) => {
-          if (error.error.code === "auth/email-already-in-use") {
-            toast.error("Email already in use.");
+          if (error.error.code === "USER_ALREADY_EXISTS") {
+            toast.error("E-mail já cadastrado.");
             return form.setError("email", {
-              message: "Email already in use.",
-            });
-          } else if (error.error.code === "auth/invalid-email") {
-            toast.error("Invalid email.");
-            return form.setError("email", {
-              message: "Invalid email.",
+              message: "E-mail já cadastrado.",
             });
           }
-          toast.error(error.error.message || "Failed to create account.");
-          form.setError("email", {
-            message: error.error.message || "Failed to create account.",
-          });
+          toast.error(error.error.message);
         },
       },
     });
   }
+
   return (
     <>
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>New Account</CardTitle>
-          <CardDescription> Create your account here. </CardDescription>
+          <CardTitle>Criar conta</CardTitle>
+          <CardDescription>Crie uma conta para continuar.</CardDescription>
         </CardHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <CardContent className="grid gap-6">
+            <CardContent className="grid w-full gap-6">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Nome</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Name" />
+                      <Input placeholder="Digite seu nome" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -114,24 +110,23 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Email" />
+                      <Input placeholder="Digite seu email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Senha</FormLabel>
                     <FormControl>
                       <Input
-                        {...field}
+                        placeholder="Digite sua senha"
                         type="password"
-                        placeholder="Password"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -140,15 +135,15 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="confirmPassword"
+                name="passwordConfirmation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
+                    <FormLabel>Confirmar senha</FormLabel>
                     <FormControl>
                       <Input
-                        {...field}
+                        placeholder="Digite a sua senha novamente"
                         type="password"
-                        placeholder="Confirm Password"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -157,7 +152,7 @@ const SignUpForm = () => {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit">Create Account</Button>
+              <Button type="submit">Criar conta</Button>
             </CardFooter>
           </form>
         </Form>
@@ -165,42 +160,5 @@ const SignUpForm = () => {
     </>
   );
 };
-export default SignUpForm;
 
-<Card>
-  <CardHeader>
-    <CardTitle>New Account</CardTitle>
-    <CardDescription>
-      Create your account here. After you save, you will be logged out.
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="grid gap-6">
-    <div className="grid gap-3">
-      <Label htmlFor="name">Name</Label>
-      <Input id="name" placeholder="Enter your name" />
-    </div>
-    <div className="grid gap-3">
-      <Label htmlFor="email">E-mail</Label>
-      <Input id="email" placeholder="Enter your email" />
-    </div>
-    <div className="grid gap-3">
-      <Label htmlFor="tabs-demo-current">Password</Label>
-      <Input
-        id="tabs-demo-current"
-        type="password"
-        placeholder="Enter your password"
-      />
-    </div>
-    <div className="grid gap-3">
-      <Label htmlFor="tabs-demo-new">Confirm Password</Label>
-      <Input
-        id="tabs-demo-new"
-        type="password"
-        placeholder="Confirm your password"
-      />
-    </div>
-  </CardContent>
-  <CardFooter>
-    <Button>Create Account</Button>
-  </CardFooter>
-</Card>;
+export default SignUpForm;

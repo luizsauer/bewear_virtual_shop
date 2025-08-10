@@ -1,10 +1,10 @@
 // src\app\category\[slug]\page.tsx
+import { notFound } from "next/navigation";
 
 import { Header } from "@/components/common/header";
 import ProductItem from "@/components/common/product-item";
 import { db } from "@/db";
 import { categoryTable, productTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -16,7 +16,7 @@ const CategoryPage = async ({ params }: CategoryPageProps) => {
     where: eq(categoryTable.slug, slug),
   });
   if (!category) {
-    return <div>Category not found</div>;
+    return notFound();
   }
   const products = await db.query.productTable.findMany({
     where: eq(productTable.categoryId, category.id),
@@ -27,11 +27,15 @@ const CategoryPage = async ({ params }: CategoryPageProps) => {
   return (
     <>
       <Header />
-      <div className="flex w-full flex-col gap-6 p-5">
-        <h2 className="text-1xl font-semibold">{category?.name}</h2>
+      <div className="space-y-6 px-5">
+        <h2 className="text-xl font-semibold">{category.name}</h2>
         <div className="grid grid-cols-2 gap-4">
           {products.map((product) => (
-            <ProductItem key={product.id} product={product} />
+            <ProductItem
+              key={product.id}
+              product={product}
+              textContainerClassName="max-w-full"
+            />
           ))}
         </div>
       </div>

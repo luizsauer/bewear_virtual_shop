@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import Link from "next/link";
 
@@ -8,19 +7,17 @@ import { productVariantTable } from "@/db/schema";
 interface VariantSelectorProps {
   selectedVariantSlug: string;
   variants: (typeof productVariantTable.$inferSelect)[];
-  productSlug: string;
 }
 
 const VariantSelector = ({
   selectedVariantSlug,
   variants,
-  productSlug,
 }: VariantSelectorProps) => {
   return (
     <div className="flex items-center gap-4">
       {variants.map((variant) => (
         <Link
-          href={`/product/${productSlug}?variant=${variant.slug}`}
+          href={`/product-variant/${variant.slug}`}
           key={variant.id}
           className={
             selectedVariantSlug === variant.slug
